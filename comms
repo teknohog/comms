@@ -200,6 +200,7 @@ z, x, c, v, b   = prev, play, pause, stop, next (as in Audacious)
 Tab             = Goto playlist/filelist
 s               = Toggle shuffle (see below if it's on[S] or off[s])
 r               = Toggle repeat (ditto with [R]/[r])
+A               = Toggle playlist advance ([A]/[a])
 Left/Right      = Seek -/+ 5 seconds within song
 Ctrl-l          = Refresh screen
 q               = Quit
@@ -286,7 +287,7 @@ class StatusWindow(Window):
         self.timeout_tag = None
 
     def newwin(self):
-        return curses.newwin(1, self.parent.cols-16, self.parent.rows-1, 0) # watch the width.. related to CounterWindow!
+        return curses.newwin(1, self.parent.cols-20, self.parent.rows-1, 0) # watch the width.. related to CounterWindow!
 
     def update(self):
         msg = string.translate(self.current_message, Window.translationTable)
@@ -324,9 +325,14 @@ class CounterWindow(Window):
         self.mode = 1
 
     def newwin(self):
-        return curses.newwin(1, 15, self.parent.rows-1, self.parent.cols-15)
+        return curses.newwin(1, 19, self.parent.rows-1, self.parent.cols-19)
 
     def update(self):
+        if app.aud.player.AutoAdvance():
+            adv_status = "A"
+        else:
+            adv_status = "a"
+
         if app.aud.player.Repeat():
             rep_status = "R"
         else:
@@ -340,7 +346,7 @@ class CounterWindow(Window):
         seconds = app.aud.player.Time() / 1000
         m, s = divmod(seconds, 60)
 
-        statusline = "[" + rep_status + "] [" + shu_status + "]"
+        statusline = "[" + adv_status + "] [" + rep_status + "] [" + shu_status + "]"
 
         self.move(0, 0)
         self.attron(curses.A_BOLD)
@@ -376,6 +382,7 @@ class RootWindow(Window):
         keymap.bind('x', app.play, ())
         keymap.bind('r', app.toggle_repeat, ())
         keymap.bind('s', app.toggle_shuffle, ())
+        keymap.bind('A', app.toggle_advance, ())
 #        keymap.bind('t', app.toggle_counter_mode, ())
         keymap.bind('q', app.quit, ())
         keymap.bind('C', self.command_add_cd, ())
@@ -1140,6 +1147,10 @@ class Application:
         self.aud.player.ToggleShuffle()
         self.counter()
         
+    def toggle_advance(self):
+        self.aud.player.ToggleAutoAdvance()
+        self.counter()
+
     def run(self):
         if self.aud.player.Length():
             app.win_tab.change_window()

@@ -1,0 +1,105 @@
+30.11.2003:
+Added command_play_album contributed by Kim Poulsen <kpo()daimi.au.dk>
+
+30.12.2003:
+Changed backend into pyxmms
+(http://www.via.ecp.fr/~flo/2002/PyXMMS/xmms.html)
+
+26.08.2005: Added command_add_cd and command_play_cd
+
+28.9.2005: Improved xmms launching. If an X server is running, it is utilized.
+
+8.12.2005:
+Disabed move during playback (see function command_move for reasons)
+Re-enabled mark_all
+Added mplayer-style 9/0 keybindings for volume down/up
+Moved audio CD functions from playlist to root window
+
+20060106:
+Disabled periodic display updates while paused (to facilitate the following)
+Added display_fileinfo. It has some problems still:
+* when path is too long -- use larger terminal window if possible
+* when song is playing -- pause the song to see the path
+
+20060329:
+Added the rather experimental command_add_via_cache. It copies a file
+to a cache directory, and adds that copy into playlist. I wrote it to
+help with DJing, so that I can make a playlist of files that are
+burned on different CDs.
+It could use a feature to remove files from cache after they have been
+played, but it's not essential for me at the moment. A single night's
+cache should not take too many gigs.
+
+20060615:
+Kind of bugfix in command_add_cd and command_play_cd
+
+20060829:
+command_mark_all: removed dupe and changed behaviour to toggle. In
+fact I wanted a kind of unmark_all since I sometimes mark_all by
+accident. Then again marking/unmarking of single entries is a toggle
+with a single key, so this may be more sensible.
+
+20061102:
+Version for Audacious with xmmsalike.py + ctypes instead of
+pyxmms. Aim for a general xmms/audacious/bpm version, as the interface
+allows this pretty easily. However, I had to hardcode /mnt/cdrom as
+the drive mountpoint, since the functions for reading the config are
+not so universal. I don't consider this a big issue, but hardcoding is
+such a loss of elegance ;)
+
+20061103:
+
+Generalized xmmsalike.py usage to cover xmms and bmp in addition to
+audacious. (BMP does need testing though, I don't have it at the
+moment.) Also rebuilt the X detection and headless stuff, it may need
+some more refining. Since the cdrom directory is no longer detected,
+and there are some other variables you need to specify, I put those at
+the top of this script for easier configuration.
+
+20061103b:
+
+New config file reading function; now we can again get CDDA directory
+from the player :)
+
+20071115:
+
+Audacious 1.4.0 changed API, allows control via dbus, so I modified
+Comms to use dbus-python. No C library hacks needed :) At the same
+time I removed some obsolete things like the Xvfb parts, and support
+for other players like XMMS. The MPRIS interface of Audacious' dbus
+interface looks interesting, it should work as a standard remote
+interface for multiple players, so you might look into it in the
+future.
+
+20071116:
+
+Added negative-time protection for seek()
+Updated helptext to reflect the working add_url function, and the
+search that's always been there
+Changed str() to unicode() that seemed to fix some character-encoding bugs
+
+20071203:
+
+Further Unicode fixes: the fundamental problem wasn't apparently with
+str() vs. unicode(), but with the .encode(\"utf8\"). I had previously
+added this to some SongTitle fetches but not all. Then I ran into
+other problems with unicode(), as some file listings were broken. So
+it's back to str() with more systematic utf8 encodings.
+
+20071204:
+
+Brown bag fix for command_chdir_or_play(): The last item of a list has
+the index (length - 1), rather than (length + 1).
+
+20080127:
+
+Reorganized the Audacious startup loop, to avoid launching multiple instances
+
+--------------------------------------------------------------
+
+Remaining problems due to Audacious 1.4.0:
+
+CDDA input plugin seems to have changed, I haven't figured out how it
+works.
+
+Outright bugs independent of Comms

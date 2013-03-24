@@ -197,6 +197,7 @@ class HelpWindow(Window):
     text = _("""\
 z, x, c, v, b   = prev, play, pause, stop, next (as in Audacious)
 +,= / -         = Increase / decrease volume
+o               = Fade out and stop
 Tab             = Goto playlist/filelist
 s               = Toggle shuffle (see below if it's on[S] or off[s])
 r               = Toggle repeat (ditto with [R]/[r])
@@ -375,6 +376,7 @@ class RootWindow(Window):
 #        keymap.bind(range(48,58), app.key_volume) # 1234567890
         keymap.bind(['+', "="], app.inc_volume, ())
         keymap.bind('-', app.dec_volume, ())
+        keymap.bind('o', app.fadeout, ())
         keymap.bind('b', app.next, ())
         keymap.bind('z', app.prev, ())
         keymap.bind('c', app.pause, ())
@@ -1200,6 +1202,24 @@ class Application:
     def set_volume(self, v):
         # 2-tuple
         self.aud.player.SetVolume(v[0], v[1])
+
+    def fadeout(self):
+        # Decrease volume to zero over a few seconds, stop playing,
+        # and return volume to original for the next track.
+
+        fadetime = 5
+        startvol = self.aud.player.Volume()
+
+        # vol = sum(startvol) / 2; another 2 for the dec_volume step size
+        rate = float(fadetime) / (sum(startvol) / 4)
+        
+        # 2-tuple
+        while sum(self.aud.player.Volume()) > 0:
+            self.dec_volume()
+            time.sleep(rate)
+
+        self.stop()
+        self.set_volume(startvol)
 
     def quit(self):
         if self.aud.daemon_pid:

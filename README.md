@@ -17,4 +17,6 @@ scratch my own itches as a DJ / sound guy of a student theatre:
 * Hotkeys for playing each of the first 22 tracks -- for playing sound
   effects on demand for (improvisational) theatre
 
+* Fade out and stop
+
 The interface to Audacious uses D-bus, so dbus-python is required.

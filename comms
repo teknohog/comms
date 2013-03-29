@@ -841,7 +841,7 @@ class PlaylistWindow(ListWindow):
             self.buffer = []
             if xlength > 0:
                 for i in range(xlength):
-                    entry = PlaylistEntry(unicode(i+1) + ". " + app.aud.player.SongTitle(UInt32(i)).encode("utf8"))
+                    entry = PlaylistEntry(str(i+1) + ". " + app.aud.player.SongTitle(UInt32(i)).encode("utf8"))
                     self.buffer.append(entry)
 
 # old xmmsctrl impl.

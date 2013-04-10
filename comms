@@ -197,12 +197,12 @@ class HelpWindow(Window):
     text = _("""\
 z, x, c, v, b   = prev, play, pause, stop, next (as in Audacious)
 +,= / -         = Increase / decrease volume
-o               = Fade out and stop
+o / O           = Fade out over 5 or 10 s, and stop
 Tab             = Goto playlist/filelist
 s               = Toggle shuffle (see below if it's on[S] or off[s])
 r               = Toggle repeat (ditto with [R]/[r])
 A               = Toggle playlist advance ([A]/[a])
-Left/Right      = Seek -/+ 5 seconds within song
+< / >           = Seek -/+ 5 seconds within song
 Ctrl-l          = Refresh screen
 q               = Quit
 Esc             = Abort prompted operation (w, o)
@@ -214,13 +214,13 @@ Ctrl-s, /, ?    = Search
 Movement: Up, C-p, k, Down, C-n, j, PgUp, K, PgDown, J, Home, g, End, G
 
 Filelist only:
-. or Backspace  = Parent directory
-Enter           = Goto directory; Play file
-Space           = Add file to playlist
-a               = Add directory recursively to playlist
-o               = Prompt for directory to go to
-p               = Clear playlist and play directory contents
-t               = Add file via harddrive cache
+. or Backspace or Left  = Parent directory
+Enter or Right          = Goto directory; Play file
+Space                   = Add file to playlist
+a                       = Add directory recursively to playlist
+o                       = Prompt for directory to go to
+p                       = Clear playlist and play directory contents
+t                       = Add file via harddrive cache
 
 Playlist only:
 Enter    = Start playing from file
@@ -371,12 +371,13 @@ class RootWindow(Window):
         Window.__init__(self, parent)
         keymap = Keymap()
         keymap.bind(12, self.update, ()) # C-l
-        keymap.bind([curses.KEY_LEFT, 2], app.seek, (-1,)) # Left, C-b
-        keymap.bind([curses.KEY_RIGHT, 6], app.seek, (1,)) # Right, C-f
+        keymap.bind('<', app.seek, (-1,))
+        keymap.bind('>', app.seek, (1,))
 #        keymap.bind(range(48,58), app.key_volume) # 1234567890
         keymap.bind(['+', "="], app.inc_volume, ())
         keymap.bind('-', app.dec_volume, ())
-        keymap.bind('o', app.fadeout, ())
+        keymap.bind('o', app.fadeout, (5,))
+        keymap.bind('O', app.fadeout, (10,))
         keymap.bind('b', app.next, ())
         keymap.bind('z', app.prev, ())
         keymap.bind('c', app.pause, ())
@@ -641,8 +642,8 @@ class FilelistWindow(ListWindow):
         except OSError: self.chdir(os.environ['HOME'])
         self.mtime_when = 0
         self.mtime = None
-        self.keymap.bind('\n', self.command_chdir_or_play, ())
-        self.keymap.bind(['.', curses.KEY_BACKSPACE],
+        self.keymap.bind(['\n', curses.KEY_RIGHT, 6], self.command_chdir_or_play, ())
+        self.keymap.bind(['.', curses.KEY_BACKSPACE, curses.KEY_LEFT, 2],
                          self.command_chparentdir, ())
         self.keymap.bind(' ', self.command_add, ())
         self.keymap.bind('a', self.command_add_recursively, ())
@@ -1203,21 +1204,30 @@ class Application:
         # 2-tuple
         self.aud.player.SetVolume(v[0], v[1])
 
-    def fadeout(self):
+    def fadeout(self, fadetime):
         # Decrease volume to zero over a few seconds, stop playing,
         # and return volume to original for the next track.
 
-        fadetime = 5
+        # You may want to undo a mistaken fadeout while it's
+        # fading. Unfortunately, the current simple way will block
+        # other keypresess while this function is running... so let's
+        # just have a basic sanity check before starting:
+        if (not app.aud.player.Playing()) or app.aud.player.Paused():
+            return 1
+
+        # stereo volume = 2-tuple
+
         startvol = self.aud.player.Volume()
 
-        # vol = sum(startvol) / 2; another 2 for the dec_volume step size
-        rate = float(fadetime) / (sum(startvol) / 4)
-        
-        # 2-tuple
-        while sum(self.aud.player.Volume()) > 0:
-            self.dec_volume()
-            time.sleep(rate)
+        # dec_volume does 2 steps by default, but a smoother change is
+        # nicer here, so use change_volume directly with step -1.
 
+        rate = float(fadetime) / (sum(startvol) / 2)
+
+        while sum(self.aud.player.Volume()) > 0:
+            self.change_volume((-1, -1))
+            time.sleep(rate)
+            
         self.stop()
         self.set_volume(startvol)
 

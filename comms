@@ -288,7 +288,7 @@ class StatusWindow(Window):
         self.timeout_tag = None
 
     def newwin(self):
-        return curses.newwin(1, self.parent.cols-20, self.parent.rows-1, 0) # watch the width.. related to CounterWindow!
+        return curses.newwin(1, self.parent.cols-24, self.parent.rows-1, 0) # watch the width.. related to CounterWindow!
 
     def update(self):
         msg = string.translate(self.current_message, Window.translationTable)
@@ -326,7 +326,8 @@ class CounterWindow(Window):
         self.mode = 1
 
     def newwin(self):
-        return curses.newwin(1, 19, self.parent.rows-1, self.parent.cols-19)
+        # watch the width.. related to StatusWindow
+        return curses.newwin(1, 24, self.parent.rows-1, self.parent.cols-24)
 
     def update(self):
         if app.aud.player.AutoAdvance():
@@ -344,14 +345,18 @@ class CounterWindow(Window):
         else:            
             shu_status = "s"
 
+        volume = str(sum(app.aud.player.Volume()) / 2)
+
         seconds = app.aud.player.Time() / 1000
         m, s = divmod(seconds, 60)
 
-        statusline = "[" + adv_status + "] [" + rep_status + "] [" + shu_status + "]"
+        statusline = "[" + adv_status + "] [" + rep_status + "] [" + shu_status + "] " + volume + "%"
 
         self.move(0, 0)
         self.attron(curses.A_BOLD)
-        self.insstr(statusline + " %02dm %02ds" % (m, s))
+        # Extra spaces at the end added due to variable width of
+        # volume, otherwise the contents are repeated
+        self.insstr(statusline + " %02dm %02ds  " % (m, s))
         # Dog knows why addstr fails.. fix borrowed from cplay 1.46
         self.attroff(curses.A_BOLD)
         self.touchwin()

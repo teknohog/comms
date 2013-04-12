@@ -1195,12 +1195,18 @@ class Application:
     def change_volume(self, dv):
         #  2-tuple
         self.set_volume(map(lambda x, y: x+y, self.aud.player.Volume(), dv))
-
+        # Don't update display here, since it would slow down
+        # fadeout...
+        
     def inc_volume(self):
         self.change_volume((2, 2))
+        # ...but here (and below) we need an update to change volume
+        # when stopped.
+        self.counter()
 
     def dec_volume(self):
         self.change_volume((-2, -2))
+        self.counter()
 
     def key_volume(self, ch):
         self.set_volume(((ch & 0x0f) * 10, (ch & 0x0f) * 10))
@@ -1235,6 +1241,10 @@ class Application:
             
         self.stop()
         self.set_volume(startvol)
+        
+        # Update volume display with startvol
+        self.counter()
+
 
     def quit(self):
         if self.aud.daemon_pid:

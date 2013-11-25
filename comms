@@ -196,7 +196,7 @@ class Window:
 class HelpWindow(Window):
     text = _("""\
 z, x, c, v, b   = prev, play, pause, stop, next (as in Audacious)
-+,= / -         = Increase / decrease volume
++,= / -,_       = Increase / decrease volume
 o / O           = Fade out over 5 or 10 s, and stop
 Tab             = Goto playlist/filelist
 s               = Toggle shuffle (see below if it's on[S] or off[s])
@@ -381,6 +381,7 @@ class RootWindow(Window):
 #        keymap.bind(range(48,58), app.key_volume) # 1234567890
         keymap.bind(['+', "="], app.inc_volume, ())
         keymap.bind('-', app.dec_volume, ())
+        keymap.bind('_', app.drop_volume, ())
         keymap.bind('o', app.fadeout, (5,))
         keymap.bind('O', app.fadeout, (10,))
         keymap.bind('b', app.next, ())
@@ -1206,6 +1207,14 @@ class Application:
 
     def dec_volume(self):
         self.change_volume((-2, -2))
+        self.counter()
+
+    def drop_volume(self):
+        #self.change_volume((-10, -10))
+        # This is a little harsh, a quick fade should be nicer
+        for i in range(10):
+            self.change_volume((-1, -1))
+
         self.counter()
 
     def key_volume(self, ch):

@@ -46,7 +46,8 @@ import select
 import re
 import shutil
 
-from dbus import Bus, DBusException, UInt32
+from pydbus import SessionBus
+
 import ConfigParser
 
 try: from ncurses import curses
@@ -271,9 +272,9 @@ class ProgressWindow(Window):
         self.refresh()
 
     def progress(self):
-        denom = float(app.aud.player.SongLength(app.aud.player.Position()) * 1000)
+        denom = float(app.aud.player.SongLength(app.aud.player.Position()[0])[0] * 1000)
         if denom > 0:
-            value = float(app.aud.player.Time()) / denom
+            value = float(app.aud.player.Time()[0]) / denom
         else:
             value = 0
         self.value = min(value, 0.99)
@@ -330,24 +331,24 @@ class CounterWindow(Window):
         return curses.newwin(1, 24, self.parent.rows-1, self.parent.cols-24)
 
     def update(self):
-        if app.aud.player.AutoAdvance():
+        if app.aud.player.AutoAdvance()[0]:
             adv_status = "A"
         else:
             adv_status = "a"
 
-        if app.aud.player.Repeat():
+        if app.aud.player.Repeat()[0]:
             rep_status = "R"
         else:
             rep_status = "r"
 
-        if app.aud.player.Shuffle():
+        if app.aud.player.Shuffle()[0]:
             shu_status = "S"
         else:            
             shu_status = "s"
 
         volume = str(sum(app.aud.player.Volume()) / 2)
 
-        seconds = app.aud.player.Time() / 1000
+        seconds = app.aud.player.Time()[0] / 1000
         m, s = divmod(seconds, 60)
 
         statusline = "[" + adv_status + "] [" + rep_status + "] [" + shu_status + "] " + volume + "%"
@@ -725,7 +726,7 @@ class FilelistWindow(ListWindow):
 
             # ..so I rewrite it similarly to pyxmms.
             app.aud.player.Add("file://" + self.cwd + self.current())
-            app.aud.player.Jump(UInt32(app.aud.player.Length() - 1))
+            app.aud.player.Jump(app.aud.player.Length()[0] - 1)
             app.aud.player.Play()
 
     def command_chparentdir(self):
@@ -842,13 +843,14 @@ class PlaylistWindow(ListWindow):
     def update(self, force = 1):
 
         # If the list doesn't change, let's not lose any marking info!
-        xlength = app.aud.player.Length()
+        xlength = app.aud.player.Length()[0]
         if xlength != len(self.buffer):
             # List has changed.
             self.buffer = []
             if xlength > 0:
                 for i in range(xlength):
-                    entry = PlaylistEntry(str(i+1) + ". " + app.aud.player.SongTitle(UInt32(i)).encode("utf8"))
+                    #entry = PlaylistEntry(str(i+1) + ". " + app.aud.player.SongTitle(i)[0].encode("utf8"))
+                    entry = PlaylistEntry(str(i+1) + ". " + app.aud.player.SongTitle(i)[0])
                     self.buffer.append(entry)
 
 # old xmmsctrl impl.
@@ -879,7 +881,7 @@ class PlaylistWindow(ListWindow):
         app.aud.player.Clear()
 
     def putstr(self, entry, *pos):
-        playpos = app.aud.player.Position()
+        playpos = app.aud.player.Position()[0]
         if self.buffer.index(entry) == playpos: self.attron(curses.A_BOLD)
         apply(ListWindow.putstr, (self, entry) + pos)
         if self.buffer.index(entry) == playpos: self.attroff(curses.A_BOLD)
@@ -892,12 +894,12 @@ class PlaylistWindow(ListWindow):
         return l
 
     def get_active_entry(self):
-        return self.buffer[app.aud.player.Position()]
+        return self.buffer[app.aud.player.Position()[0]]
 
     def command_play(self):
         if not self.buffer: return
-        app.aud.player.Jump(UInt32(self.bufptr))
-        if not app.aud.player.Playing():
+        app.aud.player.Jump(self.bufptr)
+        if not app.aud.player.Playing()[0]:
             app.play()
         else:
             app.display_title()
@@ -934,7 +936,7 @@ class PlaylistWindow(ListWindow):
         # the indices of to-be-deleted items will change
         for i in range(len(self.buffer)-1, -1, -1):
             if self.buffer[i].is_marked():
-                app.aud.player.Delete(UInt32(i))
+                app.aud.player.Delete(i)
 
         try: self.bufptr = self.buffer.index(current_entry)
         except ValueError: self.bufptr = 0
@@ -951,7 +953,7 @@ class PlaylistWindow(ListWindow):
         # live playback.. disable moving during playback for now, and
         # put a warning message.
 
-        if app.aud.player.Playing():
+        if app.aud.player.Playing()[0]:
             app.status(_("comms move disabled during playback :("), 5)
         else:
             if not self.buffer: return
@@ -963,9 +965,9 @@ class PlaylistWindow(ListWindow):
             for i in range(0, len(self.buffer)):
                 if self.buffer[i].is_marked():
                     filelist.append("") # to maintain the correct indexing
-                    l.append(app.aud.player.SongFilename(UInt32(i)))
+                    l.append(app.aud.player.SongFilename(i)[0])
                 else:
-                    filelist.append(app.aud.player.SongFilename(UInt32(i)))
+                    filelist.append(app.aud.player.SongFilename(i)[0])
 
             self.bufptr = self.buffer.index(current_entry)
 
@@ -1026,7 +1028,7 @@ class PlaylistWindow(ListWindow):
         try:
             file = open(filename, "w")
             for i in range(0, len(self.buffer)-1):
-                file.write("%s\n" % app.aud.player.SongFilename(UInt32(i)))
+                file.write("%s\n" % app.aud.player.SongFilename(i)[0])
             file.close()
             app.status(_("ok"), 1)
         except IOError:
@@ -1118,13 +1120,15 @@ class Application:
 
     def display_title(self):
         time.sleep(0.05) # if we use this for next/prev/pause etc.
-        songname = self.aud.player.SongTitle(self.aud.player.Position()).encode("utf8")
-        if self.aud.player.Paused():
+        #songname = self.aud.player.SongTitle(self.aud.player.Position()[0])[0].encode("utf8")
+        songname = self.aud.player.SongTitle(self.aud.player.Position()[0])[0]
+        if self.aud.player.Paused()[0]:
             songname += " [PAUSED]"
         self.status(_(songname), 0)
 
     def display_fileinfo(self):
-        fileinfo = self.aud.player.SongFilename(self.aud.player.Position()).encode("utf8")
+        #fileinfo = self.aud.player.SongFilename(self.aud.player.Position()[0])[0].encode("utf8")
+        fileinfo = self.aud.player.SongFilename(self.aud.player.Position()[0])[0]
         self.status(_(fileinfo), 0)
 
     def play(self):
@@ -1161,7 +1165,7 @@ class Application:
         self.counter()
 
     def run(self):
-        if self.aud.player.Length():
+        if self.aud.player.Length()[0]:
             app.win_tab.change_window()
 
         while 1:
@@ -1172,7 +1176,7 @@ class Application:
 
             # apparently, a paused song is_playing technically, but
             # it's useful to disable these updates while is_paused
-            if self.aud.player.Playing() and not self.aud.player.Paused():
+            if self.aud.player.Playing()[0] and not self.aud.player.Paused()[0]:
                 timeout = 1
                 self.counter() # progress bar is hard, we don't have total times
                 self.progress()
@@ -1190,8 +1194,8 @@ class Application:
         self.win_root.win_counter.toggle_mode()
 
     def seek(self, direction):
-        newtime = self.aud.player.Time() + direction * self.jump_const
-        self.aud.player.Seek(UInt32(max(0, newtime)))
+        newtime = self.aud.player.Time()[0] + direction * self.jump_const
+        self.aud.player.Seek(max(0, newtime))
 
     def change_volume(self, dv):
         #  2-tuple
@@ -1232,7 +1236,7 @@ class Application:
         # fading. Unfortunately, the current simple way will block
         # other keypresess while this function is running... so let's
         # just have a basic sanity check before starting:
-        if (not app.aud.player.Playing()) or app.aud.player.Paused():
+        if (not app.aud.player.Playing()[0]) or app.aud.player.Paused()[0]:
             return 1
 
         # stereo volume = 2-tuple
@@ -1276,15 +1280,15 @@ class Application:
 class AudPlayer:
     def __init__(self):
 
-        bus = Bus(Bus.TYPE_SESSION)
-
+        bus = SessionBus()
+        
         self.daemon_pid = 0
 
         # try starting audacious if we can't connect straight away
 
         try:
-            self.player = bus.get_object('org.atheme.audacious', '/org/atheme/audacious')
-        except DBusException:
+            self.player = bus.get('org.atheme.audacious')
+        except:
             # No running player -> start and init default_player.
             binary = default_player
             environ = os.environ
@@ -1309,9 +1313,9 @@ class AudPlayer:
             # Now there should be a player starting, try to connect to it and wait
             while True:
                 try:
-                    self.player = bus.get_object('org.atheme.audacious', '/org/atheme/audacious')
+                    self.player = bus.get('org.atheme.audacious')
                     break
-                except DBusException:
+                except:
                     time.sleep(0.5)
 
         self.config = ConfigParser.SafeConfigParser()

@@ -23,9 +23,3 @@ Since version 3.5, Audacious uses the newer GDBus framework. This
 mandated a change from the python-dbus library to pydbus:
 
 https://github.com/LEW21/pydbus
-
-This library had some random timeout issues with Audacious. They were
-fixed by changing the timeout=10 to 100 in pydbus/bus.py. This problem
-is still apparent when using Comms to start Audacious, but it is not
-recommended anyway, for reasons such as error messages clogging the
-terminal.

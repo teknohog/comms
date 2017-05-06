@@ -272,9 +272,9 @@ class ProgressWindow(Window):
         self.refresh()
 
     def progress(self):
-        denom = float(app.aud.player.SongLength(app.aud.player.Position()[0])[0] * 1000)
+        denom = float(app.aud.player.SongLength(app.aud.player.Position()) * 1000)
         if denom > 0:
-            value = float(app.aud.player.Time()[0]) / denom
+            value = float(app.aud.player.Time()) / denom
         else:
             value = 0
         self.value = min(value, 0.99)
@@ -331,24 +331,24 @@ class CounterWindow(Window):
         return curses.newwin(1, 24, self.parent.rows-1, self.parent.cols-24)
 
     def update(self):
-        if app.aud.player.AutoAdvance()[0]:
+        if app.aud.player.AutoAdvance():
             adv_status = "A"
         else:
             adv_status = "a"
 
-        if app.aud.player.Repeat()[0]:
+        if app.aud.player.Repeat():
             rep_status = "R"
         else:
             rep_status = "r"
 
-        if app.aud.player.Shuffle()[0]:
+        if app.aud.player.Shuffle():
             shu_status = "S"
         else:            
             shu_status = "s"
 
         volume = str(sum(app.aud.player.Volume()) / 2)
 
-        seconds = app.aud.player.Time()[0] / 1000
+        seconds = app.aud.player.Time() / 1000
         m, s = divmod(seconds, 60)
 
         statusline = "[" + adv_status + "] [" + rep_status + "] [" + shu_status + "] " + volume + "%"
@@ -726,7 +726,7 @@ class FilelistWindow(ListWindow):
 
             # ..so I rewrite it similarly to pyxmms.
             app.aud.player.Add("file://" + self.cwd + self.current())
-            app.aud.player.Jump(app.aud.player.Length()[0] - 1)
+            app.aud.player.Jump(app.aud.player.Length() - 1)
             app.aud.player.Play()
 
     def command_chparentdir(self):
@@ -843,14 +843,14 @@ class PlaylistWindow(ListWindow):
     def update(self, force = 1):
 
         # If the list doesn't change, let's not lose any marking info!
-        xlength = app.aud.player.Length()[0]
+        xlength = app.aud.player.Length()
         if xlength != len(self.buffer):
             # List has changed.
             self.buffer = []
             if xlength > 0:
                 for i in range(xlength):
-                    #entry = PlaylistEntry(str(i+1) + ". " + app.aud.player.SongTitle(i)[0].encode("utf8"))
-                    entry = PlaylistEntry(str(i+1) + ". " + app.aud.player.SongTitle(i)[0])
+                    #entry = PlaylistEntry(str(i+1) + ". " + app.aud.player.SongTitle(i).encode("utf8"))
+                    entry = PlaylistEntry(str(i+1) + ". " + app.aud.player.SongTitle(i))
                     self.buffer.append(entry)
 
 # old xmmsctrl impl.
@@ -881,7 +881,7 @@ class PlaylistWindow(ListWindow):
         app.aud.player.Clear()
 
     def putstr(self, entry, *pos):
-        playpos = app.aud.player.Position()[0]
+        playpos = app.aud.player.Position()
         if self.buffer.index(entry) == playpos: self.attron(curses.A_BOLD)
         apply(ListWindow.putstr, (self, entry) + pos)
         if self.buffer.index(entry) == playpos: self.attroff(curses.A_BOLD)
@@ -894,12 +894,12 @@ class PlaylistWindow(ListWindow):
         return l
 
     def get_active_entry(self):
-        return self.buffer[app.aud.player.Position()[0]]
+        return self.buffer[app.aud.player.Position()]
 
     def command_play(self):
         if not self.buffer: return
         app.aud.player.Jump(self.bufptr)
-        if not app.aud.player.Playing()[0]:
+        if not app.aud.player.Playing():
             app.play()
         else:
             app.display_title()
@@ -953,7 +953,7 @@ class PlaylistWindow(ListWindow):
         # live playback.. disable moving during playback for now, and
         # put a warning message.
 
-        if app.aud.player.Playing()[0]:
+        if app.aud.player.Playing():
             app.status(_("comms move disabled during playback :("), 5)
         else:
             if not self.buffer: return
@@ -965,9 +965,9 @@ class PlaylistWindow(ListWindow):
             for i in range(0, len(self.buffer)):
                 if self.buffer[i].is_marked():
                     filelist.append("") # to maintain the correct indexing
-                    l.append(app.aud.player.SongFilename(i)[0])
+                    l.append(app.aud.player.SongFilename(i))
                 else:
-                    filelist.append(app.aud.player.SongFilename(i)[0])
+                    filelist.append(app.aud.player.SongFilename(i))
 
             self.bufptr = self.buffer.index(current_entry)
 
@@ -1028,7 +1028,7 @@ class PlaylistWindow(ListWindow):
         try:
             file = open(filename, "w")
             for i in range(0, len(self.buffer)-1):
-                file.write("%s\n" % app.aud.player.SongFilename(i)[0])
+                file.write("%s\n" % app.aud.player.SongFilename(i))
             file.close()
             app.status(_("ok"), 1)
         except IOError:
@@ -1120,15 +1120,15 @@ class Application:
 
     def display_title(self):
         time.sleep(0.05) # if we use this for next/prev/pause etc.
-        #songname = self.aud.player.SongTitle(self.aud.player.Position()[0])[0].encode("utf8")
-        songname = self.aud.player.SongTitle(self.aud.player.Position()[0])[0]
-        if self.aud.player.Paused()[0]:
+        #songname = self.aud.player.SongTitle(self.aud.player.Position()).encode("utf8")
+        songname = self.aud.player.SongTitle(self.aud.player.Position())
+        if self.aud.player.Paused():
             songname += " [PAUSED]"
         self.status(_(songname), 0)
 
     def display_fileinfo(self):
-        #fileinfo = self.aud.player.SongFilename(self.aud.player.Position()[0])[0].encode("utf8")
-        fileinfo = self.aud.player.SongFilename(self.aud.player.Position()[0])[0]
+        #fileinfo = self.aud.player.SongFilename(self.aud.player.Position()).encode("utf8")
+        fileinfo = self.aud.player.SongFilename(self.aud.player.Position())
         self.status(_(fileinfo), 0)
 
     def play(self):
@@ -1165,7 +1165,7 @@ class Application:
         self.counter()
 
     def run(self):
-        if self.aud.player.Length()[0]:
+        if self.aud.player.Length():
             app.win_tab.change_window()
 
         while 1:
@@ -1176,7 +1176,7 @@ class Application:
 
             # apparently, a paused song is_playing technically, but
             # it's useful to disable these updates while is_paused
-            if self.aud.player.Playing()[0] and not self.aud.player.Paused()[0]:
+            if self.aud.player.Playing() and not self.aud.player.Paused():
                 timeout = 1
                 self.counter() # progress bar is hard, we don't have total times
                 self.progress()
@@ -1194,7 +1194,7 @@ class Application:
         self.win_root.win_counter.toggle_mode()
 
     def seek(self, direction):
-        newtime = self.aud.player.Time()[0] + direction * self.jump_const
+        newtime = self.aud.player.Time() + direction * self.jump_const
         self.aud.player.Seek(max(0, newtime))
 
     def change_volume(self, dv):
@@ -1236,7 +1236,7 @@ class Application:
         # fading. Unfortunately, the current simple way will block
         # other keypresess while this function is running... so let's
         # just have a basic sanity check before starting:
-        if (not app.aud.player.Playing()[0]) or app.aud.player.Paused()[0]:
+        if (not app.aud.player.Playing()) or app.aud.player.Paused():
             return 1
 
         # stereo volume = 2-tuple

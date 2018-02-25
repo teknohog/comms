@@ -1027,7 +1027,7 @@ class PlaylistWindow(ListWindow):
             filename = "%s%s" % (filename, ".m3u")
         try:
             file = open(filename, "w")
-            for i in range(0, len(self.buffer)-1):
+            for i in range(0, len(self.buffer)):
                 file.write("%s\n" % app.aud.player.SongFilename(i))
             file.close()
             app.status(_("ok"), 1)
